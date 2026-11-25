@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nuvem de ordens de serviço</title>
+<style>
+  :root {
+    --bg: #000000;
+    --panel: #0a0c10;
+    --line: #1a2a36;
+    --text: #d5e4ef;
+    --muted: #7f93a6;
+    --cyan: #7ee0ff;
+    --blank: #c8ced6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: "Segoe UI", sans-serif; }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+  #abas {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  button.aba {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.aba.ativa { color: var(--text); background: #102838; border-color: #1e6f8a; }
+  #vista-nuvem { flex: 1; min-height: 0; display: grid; grid-template-columns: 320px 1fr; }
+  #vista-planilha { flex: 1; min-height: 0; display: none; flex-direction: column; }
+  body.modo-planilha #vista-nuvem { display: none; }
+  body.modo-planilha #vista-planilha { display: flex; }
+  #barra-planilha {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+  #barra-planilha input, #barra-planilha select {
+    background: #0b1520;
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 8px;
+    font: inherit;
+    font-size: 13px;
+  }
+  #busca { width: min(420px, 46vw); }
+  #barra-planilha button, #paginacao button {
+    background: #102838;
+    color: var(--cyan);
+    border: 1px solid #1e6f8a;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #resumo-planilha { color: var(--muted); font-size: 12px; }
+  #tabela-wrap { flex: 1; overflow: auto; }
+  #tabela { border-collapse: separate; border-spacing: 0; font-size: 12px; min-width: 100%; }
+  #tabela th, #tabela td {
+    border-bottom: 1px solid var(--line);
+    border-right: 1px solid #132033;
+    padding: 6px 8px;
+    white-space: nowrap;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+  }
+  #tabela thead th { position: sticky; top: 0; background: #101924; z-index: 2; text-align: left; font-weight: 600; }
+  #tabela td.num, #tabela th.num { position: sticky; left: 0; background: #0e1622; z-index: 1; color: var(--muted); min-width: 64px; }
+  #tabela thead th.num { z-index: 3; }
+  #tabela tbody td { cursor: text; }
+  #tabela tr.marcada td { background: #16344a; }
+  #tabela input.editor {
+    width: 220px;
+    background: #0b1520;
+    color: var(--text);
+    border: 1px solid #1e6f8a;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font: inherit;
+  }
+  #paginacao {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 14px;
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+  }
+  #pag-info { color: var(--muted); font-size: 12px; }
+  aside {
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  header { padding: 18px 16px 10px; border-bottom: 1px solid var(--line); }
+  h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: 0.02em; }
+  .meta { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+  #regra {
+    margin: 10px 0 0;
+    padding: 8px 10px;
+    background: #101924;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--cyan);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  #filtros {
+    padding: 8px;
+    overflow: auto;
+    max-height: 42%;
+    border-bottom: 1px solid var(--line);
+  }
+  button.filtro {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+  button.filtro:hover { background: #132033; }
+  button.filtro.ativo {
+    background: #102838;
+    border-color: #1e6f8a;
+    color: var(--cyan);
+  }
+  #legenda { padding: 12px 14px 18px; overflow: auto; min-height: 0; }
+  #legenda h2 { margin: 0 0 8px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  button.item {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    width: 100%;
+    margin: 0 0 4px;
+    padding: 3px 6px;
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.35;
+    text-align: left;
+    color: inherit;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button.item:hover { background: #132033; }
+  button.item.ativo { background: #102838; border-color: #1e6f8a; }
+  button.item.apagado { opacity: 0.38; }
+  .bolha { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; transform: translateY(1px); }
+  .nome { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .qtd { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .nota { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
+  #cena { position: relative; min-width: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #dica {
+    position: absolute;
+    left: 16px;
+    bottom: 14px;
+    color: var(--muted);
+    font-size: 12px;
+    pointer-events: none;
+  }
+  #tip {
+    position: absolute;
+    display: none;
+    max-width: 360px;
+    padding: 10px 12px;
+    background: rgba(8, 12, 18, 0.92);
+    border: 1px solid #245066;
+    border-radius: 8px;
+    pointer-events: none;
+    font-size: 12px;
+    line-height: 1.45;
+    z-index: 2;
+  }
+  #tip strong { color: var(--cyan); font-weight: 600; }
+  #carregando {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    background: var(--bg);
+  }
+  /* Embed na Central Gráfica: mantém legenda, abas e planilha no clique */
+  html.embed #abas { padding: 8px 12px; }
+  html.embed #vista-nuvem { grid-template-columns: minmax(220px, 280px) 1fr; }
+  html.embed aside header { padding: 12px 12px 8px; }
+  html.embed #filtros { max-height: 36%; }
+</style>
+<script>if (/\bembed=1\b/.test(location.search) || new URLSearchParams(location.search).has("embed")) document.documentElement.classList.add("embed");</script>
+</head>
+<body>
+<nav id="abas">
+  <button type="button" class="aba ativa" data-aba="nuvem">Nuvem de ordens de serviço</button>
+  <button type="button" class="aba" data-aba="planilha">Planilha</button>
+</nav>
+<div id="vista-nuvem">
+<aside>
+  <header>
+    <p class="meta" id="meta">Carregando a planilha…</p>
+    <p id="regra"></p>
+  </header>
+  <div id="filtros"></div>
+  <div id="legenda"></div>
+</aside>
+<div id="cena">
+  <div id="carregando">Montando os 62.441 pontos…</div>
+  <div id="tip"></div>
+  <div id="dica">Vale para qualquer filtro · maior qtde. no centro · em branco afastados · girar / scroll</div>
+</div>
+</div>
+<div id="vista-planilha">
+  <div id="barra-planilha">
+    <input id="busca" type="search" placeholder="Buscar texto na planilha" autocomplete="off">
+    <select id="coluna-busca" aria-label="Coluna da busca"></select>
+    <button type="button" id="limpar-busca">Limpar</button>
+    <span id="resumo-planilha"></span>
+  </div>
+  <div id="tabela-wrap">
+    <table id="tabela">
+      <thead><tr id="cabecalho"></tr></thead>
+      <tbody id="corpo"></tbody>
+    </table>
+  </div>
+  <div id="paginacao">
+    <button type="button" id="pag-ant">Anterior</button>
+    <span id="pag-info"></span>
+    <button type="button" id="pag-prox">Próxima</button>
+  </div>
+</div>
+<script src="dados.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from "three";
+
+const dados = window.NUVEM;
+const bruto = Uint8Array.from(atob(dados.b64), c => c.charCodeAt(0));
+const buffer = new ArrayBuffer(bruto.byteLength);
+new Uint8Array(buffer).set(bruto);
+const codigos = new Uint16Array(buffer);
+const n = dados.rows;
+const nCol = dados.cols;
+const colIndex = Object.fromEntries(dados.columns.map((nome, i) => [nome, i]));
+const indiceLabel = dados.labels.map(lista => {
+  const mapa = new Map();
+  lista.forEach((nome, i) => { if (!mapa.has(nome)) mapa.set(nome, i); });
+  return mapa;
+});
+const CHAVE_EDICOES = "nuvem-os-edicoes-v1";
+let filtroAtivo = "OS";
+
+const cenaEl = document.getElementById("cena");
+const tip = document.getElementById("tip");
+const regra = document.getElementById("regra");
+const meta = document.getElementById("meta");
+const legenda = document.getElementById("legenda");
+const filtros = document.getElementById("filtros");
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x000000);
+cenaEl.appendChild(renderer.domElement);
+
+const cena = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 400);
+camera.position.set(14, 9, 22);
+
+// Caixa fixa do modelo (wireframe estável)
+const BOX_W = 18;
+const BOX_H = 10;
+const BOX_D = 12;
+
+const COR_VAZIO = [0.88, 0.90, 0.94];
+const COR_PERIFERIA = [0.55, 0.58, 0.64];
+// Cores bem distintas por grupo (alta saturação)
+const PALETA = [
+  [0.05, 0.85, 0.90], // ciano
+  [0.15, 0.95, 0.35], // verde
+  [0.95, 0.88, 0.08], // amarelo
+  [1.00, 0.45, 0.08], // laranja
+  [0.95, 0.12, 0.55], // magenta
+  [0.35, 0.35, 1.00], // azul
+  [0.70, 0.20, 1.00], // roxo
+  [1.00, 0.25, 0.25], // vermelho
+  [0.20, 0.95, 0.75], // água
+  [0.95, 0.65, 0.15], // âmbar
+  [0.55, 1.00, 0.20], // lima
+  [1.00, 0.40, 0.75], // rosa
+  [0.25, 0.65, 1.00], // azul claro
+  [0.90, 0.20, 0.90], // fúcsia
+];
+
+function codigo(linha, coluna) {
+  return codigos[linha * nCol + coluna];
+}
+function texto(coluna, id) {
+  const valor = dados.labels[coluna][id];
+  return valor ? valor : "Em branco";
+}
+function hash(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+function mulberry32(a) {
+  return function () {
+    a |= 0;
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function gauss(rng) {
+  let u = 1 - rng();
+  if (u < 1e-8) u = 1e-8;
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng());
+}
+function corDoGrupo(rank) {
+  if (rank < 0) return COR_VAZIO;
+  if (rank >= PALETA.length) return COR_PERIFERIA;
+  return PALETA[rank % PALETA.length];
+}
+
+const posicoes = new Float32Array(n * 3);
+const posBase = new Float32Array(n * 3);
+const cores = new Float32Array(n * 3);
+const corBase = new Float32Array(n * 3);
+const grupoPonto = new Int32Array(n);
+let destaque = null;
+const geometria = new THREE.BufferGeometry();
+geometria.setAttribute("position", new THREE.BufferAttribute(posicoes, 3));
+geometria.setAttribute("color", new THREE.BufferAttribute(cores, 3));
+
+const sprite = document.createElement("canvas");
+sprite.width = sprite.height = 32;
+{
+  const ctx = sprite.getContext("2d");
+  const grad = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  grad.addColorStop(0, "rgba(255,255,255,1)");
+  grad.addColorStop(0.35, "rgba(255,255,255,0.95)");
+  grad.addColorStop(0.7, "rgba(255,255,255,0.35)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 32, 32);
+}
+
+const pontos = new THREE.Points(
+  geometria,
+  new THREE.PointsMaterial({
+    size: 0.16,
+    map: new THREE.CanvasTexture(sprite),
+    vertexColors: true,
+    transparent: true,
+    depthWrite: false,
+    alphaTest: 0.06,
+    sizeAttenuation: true
+  })
+);
+cena.add(pontos);
+
+// Wireframe fixo do modelo
+const caixa = new THREE.LineSegments(
+  new THREE.EdgesGeometry(new THREE.BoxGeometry(BOX_W, BOX_H, BOX_D)),
+  new THREE.LineBasicMaterial({ color: 0x5ec8dc, transparent: true, opacity: 0.95 })
+);
+cena.add(caixa);
+
+function pontoEscolhido(linha) {
+  if (destaque === null) return true;
+  if (destaque === "vazio") return grupoPonto[linha] === -1;
+  return grupoPonto[linha] === destaque;
+}
+let distMinZoom = 1.2;
+let distMaxZoom = 800;
+let enquadrouInicial = false;
+function atualizarCaixa() {
+  const box = new THREE.Box3(
+    new THREE.Vector3(-BOX_W / 2, -BOX_H / 2, -BOX_D / 2),
+    new THREE.Vector3(BOX_W / 2, BOX_H / 2, BOX_D / 2)
+  );
+  geometria.boundingBox = box.clone();
+  geometria.boundingSphere = box.getBoundingSphere(new THREE.Sphere());
+  const centro = box.getCenter(new THREE.Vector3());
+  const alcance = Math.max(BOX_W, BOX_H, BOX_D);
+  const dist = alcance * 1.15;
+  distMinZoom = Math.max(0.8, alcance * 0.05);
+  distMaxZoom = Math.max(400, alcance * 6);
+  pontos.material.size = 0.16;
+  if (!enquadrouInicial) {
+    enquadrouInicial = true;
+    alvo.copy(centro);
+    camera.position.set(centro.x + dist * 0.38, centro.y + dist * 0.26, centro.z + dist * 0.72);
+    camera.near = Math.max(0.05, distMinZoom * 0.05);
+    camera.far = Math.max(2000, distMaxZoom * 4);
+    camera.updateProjectionMatrix();
+    camera.lookAt(alvo);
+  }
+}
+
+const alvo = new THREE.Vector3();
+let arrastando = false;
+let botao = 0;
+let px = 0;
+let py = 0;
+let origemX = 0;
+let origemY = 0;
+let moveu = false;
+renderer.domElement.addEventListener("pointerdown", ev => {
+  arrastando = true;
+  moveu = false;
+  botao = ev.button;
+  origemX = px = ev.clientX;
+  origemY = py = ev.clientY;
+  renderer.domElement.setPointerCapture(ev.pointerId);
+});
+renderer.domElement.addEventListener("pointerup", ev => {
+  arrastando = false;
+  if (botao === 0 && !moveu && Math.hypot(ev.clientX - origemX, ev.clientY - origemY) < 6) {
+    const linha = indiceSobCursor(ev);
+    if (linha >= 0) abrirNaPlanilha(linha);
+  }
+});
+renderer.domElement.addEventListener("pointermove", ev => {
+  if (arrastando) {
+    if (Math.hypot(ev.clientX - origemX, ev.clientY - origemY) > 5) moveu = true;
+    const dx = ev.clientX - px;
+    const dy = ev.clientY - py;
+    px = ev.clientX;
+    py = ev.clientY;
+    if (botao === 2 || ev.shiftKey) {
+      const direita = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
+      const acima = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1);
+      const escala = camera.position.distanceTo(alvo) * 0.0016;
+      alvo.addScaledVector(direita, -dx * escala);
+      alvo.addScaledVector(acima, dy * escala);
+      camera.position.addScaledVector(direita, -dx * escala);
+      camera.position.addScaledVector(acima, dy * escala);
+    } else {
+      const offset = camera.position.clone().sub(alvo);
+      const esferico = new THREE.Spherical().setFromVector3(offset);
+      esferico.theta -= dx * 0.005;
+      esferico.phi = Math.min(Math.PI - 0.08, Math.max(0.08, esferico.phi - dy * 0.005));
+      offset.setFromSpherical(esferico);
+      camera.position.copy(alvo).add(offset);
+    }
+    camera.lookAt(alvo);
+  } else {
+    apontar(ev);
+  }
+});
+renderer.domElement.addEventListener("wheel", ev => {
+  ev.preventDefault();
+  const offset = camera.position.clone().sub(alvo);
+  if (offset.lengthSq() < 1e-8) offset.set(0.72, 0.48, 0.86);
+  const passos = Math.max(1, Math.min(6, Math.abs(ev.deltaY) / 100));
+  const base = ev.deltaY > 0 ? 1.1 : 0.9;
+  const fator = Math.pow(base, passos);
+  const atual = offset.length();
+  const nova = Math.min(distMaxZoom, Math.max(distMinZoom, atual * fator));
+  offset.multiplyScalar(nova / atual);
+  camera.position.copy(alvo).add(offset);
+  camera.lookAt(alvo);
+}, { passive: false });
+renderer.domElement.addEventListener("contextmenu", ev => ev.preventDefault());
+
+const raycaster = new THREE.Raycaster();
+raycaster.params.Points.threshold = 0.08;
+const mouse = new THREE.Vector2();
+const CAMPOS = ["OS", "PROJETO", "CONTRATO", "FORNECEDOR", "TECNOLOGIA", "CLIENTE", "DIR", "SUPER", "GER", "STATUS OS", "TOTAL VALOR OS"];
+
+function indiceSobCursor(ev) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObject(pontos, false);
+  return hits.length ? hits[0].index : -1;
+}
+function apontar(ev) {
+  const linha = indiceSobCursor(ev);
+  if (linha < 0) {
+    tip.style.display = "none";
+    return;
+  }
+  const linhas = CAMPOS.map(nome => {
+    const coluna = colIndex[nome];
+    return `<div><strong>${nome}</strong> ${texto(coluna, codigo(linha, coluna))}</div>`;
+  }).join("");
+  tip.innerHTML = linhas;
+  tip.style.display = "block";
+  const rect = renderer.domElement.getBoundingClientRect();
+  const x = Math.min(ev.clientX - rect.left + 14, rect.width - 380);
+  const y = Math.min(ev.clientY - rect.top + 14, rect.height - 220);
+  tip.style.left = x + "px";
+  tip.style.top = y + "px";
+}
+
+function contar(coluna, aceitar) {
+  const mapa = new Map();
+  for (let i = 0; i < n; i++) {
+    if (aceitar && !aceitar(i)) continue;
+    const id = codigo(i, coluna);
+    mapa.set(id, (mapa.get(id) || 0) + 1);
+  }
+  return mapa;
+}
+
+function pintar(linha, cor, grupo) {
+  const i = linha * 3;
+  corBase[i] = cores[i] = cor[0];
+  corBase[i + 1] = cores[i + 1] = cor[1];
+  corBase[i + 2] = cores[i + 2] = cor[2];
+  grupoPonto[linha] = grupo;
+}
+function aplicarDestaque() {
+  for (let linha = 0; linha < n; linha++) {
+    const i = linha * 3;
+    const manter = pontoEscolhido(linha);
+    if (manter) {
+      posicoes[i] = posBase[i];
+      posicoes[i + 1] = posBase[i + 1];
+      posicoes[i + 2] = posBase[i + 2];
+      cores[i] = corBase[i];
+      cores[i + 1] = corBase[i + 1];
+      cores[i + 2] = corBase[i + 2];
+    } else {
+      posicoes[i] = 0;
+      posicoes[i + 1] = -100000;
+      posicoes[i + 2] = 0;
+      cores[i] = 0;
+      cores[i + 1] = 0;
+      cores[i + 2] = 0;
+    }
+  }
+  geometria.attributes.position.needsUpdate = true;
+  geometria.attributes.color.needsUpdate = true;
+  atualizarCaixa();
+  legenda.querySelectorAll("button.item").forEach(el => {
+    const ligado = destaque !== null && String(destaque) === el.dataset.chave;
+    el.classList.toggle("ativo", ligado);
+    el.classList.toggle("apagado", destaque !== null && !ligado);
+  });
+}
+
+function clampBox(x, y, z, margem = 0.35) {
+  const hx = BOX_W / 2 - margem;
+  const hy = BOX_H / 2 - margem;
+  const hz = BOX_D / 2 - margem;
+  return [
+    Math.max(-hx, Math.min(hx, x)),
+    Math.max(-hy, Math.min(hy, y)),
+    Math.max(-hz, Math.min(hz, z))
+  ];
+}
+
+/** Centro do grupo: 1º (maior qtde) no meio; demais em espiral para fora */
+function centroPorRank(rank) {
+  if (rank <= 0) return new THREE.Vector3(0, 0, 0);
+  const ang = rank * 2.399963;
+  const raio = 1.15 + Math.sqrt(rank) * 1.25;
+  return new THREE.Vector3(
+    Math.cos(ang) * raio,
+    Math.sin(rank * 0.55) * Math.min(2.0, 0.25 + Math.sqrt(rank) * 0.22),
+    Math.sin(ang) * raio * 0.92
+  );
+}
+
+function sigmaPorGrupo(rank, qtd) {
+  const base = Math.min(1.05, 0.32 + Math.pow(Math.max(qtd, 1), 0.33) * 0.05);
+  if (rank === 0) return Math.max(0.55, base * 1.2);
+  return Math.max(0.28, base * 0.82);
+}
+
+function colocarEm(linha, centro, rng, sigma) {
+  const x = centro.x + gauss(rng) * sigma;
+  const y = centro.y + gauss(rng) * sigma * 0.85;
+  const z = centro.z + gauss(rng) * sigma;
+  const p = clampBox(x, y, z);
+  posicoes[linha * 3] = p[0];
+  posicoes[linha * 3 + 1] = p[1];
+  posicoes[linha * 3 + 2] = p[2];
+}
+
+function aplicar(nomeFiltro) {
+  filtroAtivo = nomeFiltro;
+  destaque = null;
+  enquadrouInicial = false; // recentra a câmera a cada filtro (OS, Projeto, Contrato…)
+  const coluna = colIndex[nomeFiltro];
+  if (coluna == null) return;
+  const rng = mulberry32(hash("nuvem-centro|" + nomeFiltro) || 1);
+
+  const vazios = [];
+  const grupos = new Map();
+  const qtde = new Map();
+
+  for (let i = 0; i < n; i++) {
+    const id = codigo(i, coluna);
+    if (id === 0) {
+      vazios.push(i);
+      continue;
+    }
+    let lista = grupos.get(id);
+    if (!lista) {
+      lista = [];
+      grupos.set(id, lista);
+    }
+    lista.push(i);
+    qtde.set(id, (qtde.get(id) || 0) + 1);
+  }
+
+  // Maior quantidade → centro; demais afastando
+  const ranking = [...grupos.keys()].sort((a, b) => {
+    const dq = (qtde.get(b) || 0) - (qtde.get(a) || 0);
+    if (dq) return dq;
+    return String(texto(coluna, a)).localeCompare(String(texto(coluna, b)), "pt-BR");
+  });
+
+  const nColoridos = Math.min(PALETA.length, ranking.length);
+
+  for (let r = 0; r < ranking.length; r++) {
+    const id = ranking[r];
+    const lista = grupos.get(id) || [];
+    const centro = centroPorRank(r);
+    const sigma = sigmaPorGrupo(r, qtde.get(id) || lista.length);
+    const cor = r < nColoridos ? corDoGrupo(r) : COR_PERIFERIA;
+    for (const linha of lista) {
+      colocarEm(linha, centro, rng, sigma);
+      pintar(linha, cor, id);
+    }
+  }
+
+  // Em branco: um único agrupamento bem afastado do centro
+  if (vazios.length) {
+    const centroVazio = new THREE.Vector3(0, -4.2, 6.4);
+    const sigmaVazio = Math.min(1.35, 0.55 + Math.pow(vazios.length, 0.28) * 0.04);
+    for (const linha of vazios) {
+      colocarEm(linha, centroVazio, rng, sigmaVazio);
+      pintar(linha, COR_VAZIO, -1);
+    }
+  }
+
+  posBase.set(posicoes);
+  geometria.attributes.position.needsUpdate = true;
+  geometria.attributes.color.needsUpdate = true;
+  atualizarCaixa();
+  desenharLegenda(nomeFiltro, coluna, ranking, qtde, vazios.length, nColoridos);
+  document.querySelectorAll("button.filtro").forEach(botaoEl => {
+    botaoEl.classList.toggle("ativo", botaoEl.dataset.col === nomeFiltro);
+  });
+}
+
+function desenharLegenda(nomeFiltro, coluna, ranking, qtde, qtdVazios, nColoridos) {
+  regra.textContent = `Filtro “${nomeFiltro}”: o valor com mais ocorrências fica no centro; os demais afastam; “em branco” ficam juntos e longe.`;
+  const top = ranking.slice(0, 14);
+  const itens = top.map((id, rank) => {
+    const cor = rank < nColoridos ? corDoGrupo(rank) : COR_PERIFERIA;
+    const css = `rgb(${Math.round(cor[0] * 255)}, ${Math.round(cor[1] * 255)}, ${Math.round(cor[2] * 255)})`;
+    const nome = texto(coluna, id);
+    const q = qtde.get(id) || 0;
+    const pos = rank === 0 ? "centro" : `${rank + 1}º`;
+    return `<button type="button" class="item" data-chave="${id}"><span class="bolha" style="background:${css}"></span><span class="nome" title="${nome}">${pos} · ${nome}</span><span class="qtd">${q.toLocaleString("pt-BR")}</span></button>`;
+  }).join("");
+  const vazio = qtdVazios
+    ? `<button type="button" class="item" data-chave="vazio"><span class="bolha" style="background:#e0e4ea"></span><span class="nome">${nomeFiltro} em branco (afastados)</span><span class="qtd">${qtdVazios.toLocaleString("pt-BR")}</span></button>`
+    : "";
+  const resto = Math.max(0, ranking.length - top.length);
+  const nota = resto
+    ? `<p class="nota">Outros ${resto.toLocaleString("pt-BR")} valores mais afastados (cinza).</p>`
+    : "";
+  legenda.innerHTML = `<h2>${nomeFiltro}</h2><p class="nota">Clique num valor para isolar. Clique de novo para voltar.</p>${itens}${vazio}${nota}`;
+}
+
+legenda.addEventListener("click", ev => {
+  const botao = ev.target.closest("button.item");
+  if (!botao) return;
+  const valor = botao.dataset.chave === "vazio" ? "vazio" : Number(botao.dataset.chave);
+  destaque = destaque === valor ? null : valor;
+  aplicarDestaque();
+});
+
+dados.columns.forEach(nome => {
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "filtro";
+  botao.dataset.col = nome;
+  botao.textContent = nome;
+  botao.addEventListener("click", () => aplicar(nome));
+  filtros.appendChild(botao);
+});
+
+meta.textContent = `${n.toLocaleString("pt-BR")} pontos · uma linha da planilha cada`;
+document.getElementById("carregando").remove();
+restaurarEdicoes();
+aplicar(colIndex.OS != null ? "OS" : dados.columns[0]);
+
+function enquadrar() {
+  const largura = cenaEl.clientWidth;
+  const altura = cenaEl.clientHeight;
+  if (largura < 2 || altura < 2) return;
+  camera.aspect = largura / altura;
+  camera.updateProjectionMatrix();
+  renderer.setSize(largura, altura);
+}
+
+const POR_PAGINA = 50;
+let termo = "";
+let colunaBusca = -1;
+let listaFiltrada = null;
+let pagina = 0;
+let linhaMarcada = -1;
+const buscaEl = document.getElementById("busca");
+const colunaBuscaEl = document.getElementById("coluna-busca");
+const corpo = document.getElementById("corpo");
+const cabecalho = document.getElementById("cabecalho");
+const resumoEl = document.getElementById("resumo-planilha");
+const pagInfo = document.getElementById("pag-info");
+
+function valorBruto(linha, coluna) {
+  return dados.labels[coluna][codigo(linha, coluna)] || "";
+}
+function lembrarEdicao(linha, coluna, valor) {
+  try {
+    const todas = JSON.parse(localStorage.getItem(CHAVE_EDICOES) || "[]");
+    const lista = Array.isArray(todas) ? todas : [];
+    const i = lista.findIndex(item => item.linha === linha && item.coluna === coluna);
+    const item = { linha, coluna, valor };
+    if (i >= 0) lista[i] = item;
+    else lista.push(item);
+    localStorage.setItem(CHAVE_EDICOES, JSON.stringify(lista));
+  } catch (erro) {
+    console.warn("Não foi possível guardar a edição neste navegador.", erro);
+  }
+}
+function definirCelula(linha, coluna, valor, refletir) {
+  const chave = String(valor ?? "").trim();
+  const atual = valorBruto(linha, coluna);
+  if (chave === atual) return false;
+  let id = indiceLabel[coluna].get(chave);
+  if (id === undefined) {
+    id = dados.labels[coluna].length;
+    if (id > 65535) return false;
+    dados.labels[coluna].push(chave);
+    indiceLabel[coluna].set(chave, id);
+  }
+  codigos[linha * nCol + coluna] = id;
+  lembrarEdicao(linha, coluna, chave);
+  if (refletir !== false) aplicar(filtroAtivo);
+  return true;
+}
+function restaurarEdicoes() {
+  let todas = [];
+  try { todas = JSON.parse(localStorage.getItem(CHAVE_EDICOES) || "[]"); } catch { return; }
+  if (!Array.isArray(todas)) return;
+  for (const item of todas) {
+    if (!item || item.linha < 0 || item.linha >= n || item.coluna < 0 || item.coluna >= nCol) continue;
+    definirCelula(item.linha, item.coluna, item.valor, false);
+  }
+}
+function recalcularFiltro() {
+  const q = termo.trim().toLowerCase();
+  if (!q) { listaFiltrada = null; return; }
+  const out = [];
+  for (let r = 0; r < n; r++) {
+    if (colunaBusca >= 0) {
+      if (valorBruto(r, colunaBusca).toLowerCase().includes(q)) out.push(r);
+    } else {
+      for (let c = 0; c < nCol; c++) {
+        if (valorBruto(r, c).toLowerCase().includes(q)) { out.push(r); break; }
+      }
+    }
+  }
+  listaFiltrada = out;
+}
+function totalLinhas() { return listaFiltrada ? listaFiltrada.length : n; }
+function linhaDaPagina(indice) {
+  const pos = pagina * POR_PAGINA + indice;
+  if (pos < 0 || pos >= totalLinhas()) return -1;
+  return listaFiltrada ? listaFiltrada[pos] : pos;
+}
+function renderTabela() {
+  const total = totalLinhas();
+  const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+  if (pagina > paginas - 1) pagina = paginas - 1;
+  if (pagina < 0) pagina = 0;
+  corpo.replaceChildren();
+  for (let i = 0; i < POR_PAGINA; i++) {
+    const linha = linhaDaPagina(i);
+    if (linha < 0) break;
+    const tr = document.createElement("tr");
+    tr.dataset.linha = String(linha);
+    if (linha === linhaMarcada) tr.className = "marcada";
+    const num = document.createElement("th");
+    num.className = "num";
+    num.textContent = String(linha + 1);
+    tr.appendChild(num);
+    for (let c = 0; c < nCol; c++) {
+      const td = document.createElement("td");
+      td.dataset.col = String(c);
+      td.textContent = valorBruto(linha, c);
+      td.title = valorBruto(linha, c);
+      tr.appendChild(td);
+    }
+    corpo.appendChild(tr);
+  }
+  const inicio = total ? pagina * POR_PAGINA + 1 : 0;
+  const fim = Math.min(total, (pagina + 1) * POR_PAGINA);
+  resumoEl.textContent = termo.trim()
+    ? `${total.toLocaleString("pt-BR")} linhas encontradas`
+    : `${total.toLocaleString("pt-BR")} linhas`;
+  pagInfo.textContent = `Página ${pagina + 1} de ${paginas} · linhas ${inicio.toLocaleString("pt-BR")}–${fim.toLocaleString("pt-BR")}`;
+  const marcada = corpo.querySelector("tr.marcada");
+  if (marcada) marcada.scrollIntoView({ block: "center", inline: "nearest" });
+}
+function mostrarAba(nome) {
+  document.body.classList.toggle("modo-planilha", nome === "planilha");
+  document.querySelectorAll("button.aba").forEach(botaoAba => {
+    botaoAba.classList.toggle("ativa", botaoAba.dataset.aba === nome);
+  });
+  if (nome === "nuvem") enquadrar();
+  else renderTabela();
+}
+function abrirNaPlanilha(linha) {
+  termo = "";
+  colunaBusca = -1;
+  buscaEl.value = "";
+  colunaBuscaEl.value = "-1";
+  listaFiltrada = null;
+  linhaMarcada = linha;
+  pagina = Math.floor(linha / POR_PAGINA);
+  mostrarAba("planilha");
+}
+function iniciarEdicao(td) {
+  if (td.querySelector("input")) return;
+  const anterior = td.textContent;
+  const input = document.createElement("input");
+  input.className = "editor";
+  input.value = anterior;
+  td.textContent = "";
+  td.appendChild(input);
+  input.focus();
+  input.select();
+  let fechando = false;
+  const fechar = (salvar) => {
+    if (fechando) return;
+    fechando = true;
+    const valor = salvar ? input.value : anterior;
+    const linha = Number(td.parentElement.dataset.linha);
+    const coluna = Number(td.dataset.col);
+    td.textContent = String(valor).trim();
+    td.title = td.textContent;
+    if (salvar) definirCelula(linha, coluna, valor, true);
+  };
+  input.addEventListener("focusout", () => fechar(true));
+  input.addEventListener("keydown", ev => {
+    if (ev.key === "Enter") { ev.preventDefault(); fechar(true); }
+    if (ev.key === "Escape") { ev.preventDefault(); fechar(false); }
+  });
+}
+
+document.querySelectorAll("button.aba").forEach(botaoAba => {
+  botaoAba.addEventListener("click", () => mostrarAba(botaoAba.dataset.aba));
+});
+const opTodas = document.createElement("option");
+opTodas.value = "-1";
+opTodas.textContent = "Todas as colunas";
+colunaBuscaEl.appendChild(opTodas);
+dados.columns.forEach((nome, i) => {
+  const op = document.createElement("option");
+  op.value = String(i);
+  op.textContent = nome;
+  colunaBuscaEl.appendChild(op);
+  const th = document.createElement("th");
+  th.textContent = nome;
+  th.title = nome;
+  if (cabecalho.children.length === 0) {
+    const num = document.createElement("th");
+    num.className = "num";
+    num.textContent = "#";
+    cabecalho.appendChild(num);
+  }
+  cabecalho.appendChild(th);
+});
+let buscaTimer = 0;
+buscaEl.addEventListener("input", () => {
+  window.clearTimeout(buscaTimer);
+  buscaTimer = window.setTimeout(() => {
+    termo = buscaEl.value;
+    pagina = 0;
+    linhaMarcada = -1;
+    recalcularFiltro();
+    renderTabela();
+  }, 250);
+});
+colunaBuscaEl.addEventListener("change", () => {
+  colunaBusca = Number(colunaBuscaEl.value);
+  pagina = 0;
+  recalcularFiltro();
+  renderTabela();
+});
+document.getElementById("limpar-busca").addEventListener("click", () => {
+  termo = "";
+  colunaBusca = -1;
+  buscaEl.value = "";
+  colunaBuscaEl.value = "-1";
+  listaFiltrada = null;
+  pagina = 0;
+  linhaMarcada = -1;
+  renderTabela();
+});
+document.getElementById("pag-ant").addEventListener("click", () => { pagina -= 1; renderTabela(); });
+document.getElementById("pag-prox").addEventListener("click", () => { pagina += 1; renderTabela(); });
+corpo.addEventListener("click", ev => {
+  const td = ev.target.closest("td");
+  if (!td || td.querySelector("input")) return;
+  iniciarEdicao(td);
+});
+window.addEventListener("resize", enquadrar);
+if (window.ResizeObserver) new ResizeObserver(enquadrar).observe(cenaEl);
+enquadrar();
+
+function quadro() {
+  renderer.render(cena, camera);
+  requestAnimationFrame(quadro);
+}
+quadro();
+</script>
+</body>
+</html>

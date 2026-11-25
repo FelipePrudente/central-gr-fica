@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<title>Barras 3D · Unidade Ofensora</title>
+<style>
+  :root {
+    --bg: #e8eaed;
+    --panel: rgba(255, 255, 255, 0.92);
+    --line: #c5ced6;
+    --text: #1c2b3a;
+    --muted: #5d7082;
+    --cyan: #0f5f8a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: "Segoe UI", sans-serif; }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+  header {
+    flex: 0 0 auto;
+    padding: 10px 14px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  h1 { margin: 0; font-size: 16px; font-weight: 650; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+  #cena { position: relative; flex: 1; min-height: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #dica {
+    position: absolute;
+    left: 14px;
+    bottom: 12px;
+    color: var(--muted);
+    font-size: 12px;
+    pointer-events: none;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.7);
+  }
+  #tip {
+    position: absolute;
+    display: none;
+    max-width: 340px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    pointer-events: none;
+    font-size: 12px;
+    line-height: 1.45;
+    z-index: 2;
+    box-shadow: 0 8px 20px rgba(28, 43, 58, 0.14);
+  }
+  #tip strong { color: var(--cyan); }
+  #legenda {
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    max-width: 220px;
+    max-height: calc(100% - 24px);
+    overflow: auto;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.35;
+    z-index: 2;
+    box-shadow: 0 8px 18px rgba(28, 43, 58, 0.1);
+  }
+  #legenda h2 { margin: 0 0 6px; font-size: 11px; color: var(--muted); font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em; }
+  #legenda .item { display: flex; gap: 8px; align-items: center; margin: 4px 0; }
+  #legenda .bolha { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  #legenda .nome { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  body.embed header { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Barras 3D · Unidade Ofensora</h1>
+  <p id="meta">Carregando…</p>
+</header>
+<div id="cena">
+  <div id="legenda"></div>
+  <div id="tip"></div>
+  <div id="dica">Altura = qtde. de processos · Arraste para girar · scroll</div>
+</div>
+<script src="picos-dados.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from "three";
+import { RoundedBoxGeometry } from "./vendor/addons/geometries/RoundedBoxGeometry.js";
+import { Reflector } from "./vendor/addons/objects/Reflector.js";
+
+if (new URLSearchParams(location.search).has("embed")) document.body.classList.add("embed");
+
+const dados = window.PICOS_SEI;
+const meta = document.getElementById("meta");
+const cenaEl = document.getElementById("cena");
+const tip = document.getElementById("tip");
+
+meta.textContent = `${dados.origem} · 1 barra por unidade · máx. ${dados.maxProcessos || "—"} processos`;
+
+const legendaEl = document.getElementById("legenda");
+legendaEl.innerHTML = `<h2>Ranking ofensora</h2>` + (dados.legenda || []).map(item => {
+  const css = `rgb(${Math.round(item.cor[0] * 255)}, ${Math.round(item.cor[1] * 255)}, ${Math.round(item.cor[2] * 255)})`;
+  const media = item.mediaDias != null ? ` · méd. ${item.mediaDias} d úteis` : "";
+  const titulo = `${item.rank}º · ${item.unidade} · ${item.qtd} processos${media}`;
+  return `<div class="item"><span class="bolha" style="background:${css}"></span><span class="nome" title="${titulo}">${item.rank}º ${item.unidade} · ${item.qtd}</span></div>`;
+}).join("");
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0xe8eaed);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+cenaEl.appendChild(renderer.domElement);
+
+const cena = new THREE.Scene();
+cena.fog = new THREE.Fog(0xe8eaed, 48, 110);
+
+const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 300);
+camera.position.set(18, 14, 28);
+
+const picos = [...(dados.picos || [])].sort((a, b) => (a.rank || 0) - (b.rank || 0));
+const n = Math.max(1, picos.length);
+const maxQtd = Math.max(1, dados.maxProcessos || Math.max(...picos.map(p => p.qtdProcessos || 0), 1));
+const maxH = 12;
+const barW = Math.min(1.55, Math.max(0.72, 18 / n));
+const gap = barW * 0.42;
+const span = n * barW + (n - 1) * gap;
+const startX = -span / 2 + barW / 2;
+const pedW = span + 3.2;
+const pedD = Math.max(5.2, barW * 3.4);
+const pedH = 1.15;
+
+function corHex(rgb) {
+  const r = Math.round((rgb?.[0] ?? 0.4) * 255);
+  const g = Math.round((rgb?.[1] ?? 0.7) * 255);
+  const b = Math.round((rgb?.[2] ?? 1) * 255);
+  return (r << 16) + (g << 8) + b;
+}
+
+function corMaisClara(hex, fator = 0.35) {
+  const c = new THREE.Color(hex);
+  c.lerp(new THREE.Color(0xffffff), fator);
+  return c;
+}
+
+// Pedestal
+const pedMat = new THREE.MeshStandardMaterial({
+  color: 0xc8ccd2,
+  metalness: 0.35,
+  roughness: 0.38
+});
+const pedestal = new THREE.Mesh(
+  new RoundedBoxGeometry(pedW, pedH, pedD, 4, 0.18),
+  pedMat
+);
+pedestal.position.y = -pedH / 2;
+pedestal.castShadow = false;
+pedestal.receiveShadow = true;
+cena.add(pedestal);
+
+// Superfície reflexiva no topo do pedestal (com fallback se Reflector falhar)
+try {
+  const mirror = new Reflector(new THREE.PlaneGeometry(pedW - 0.55, pedD - 0.55), {
+    color: 0xb8bcc4,
+    textureWidth: Math.min(1024, Math.floor((window.devicePixelRatio || 1) * 512)),
+    textureHeight: Math.min(1024, Math.floor((window.devicePixelRatio || 1) * 512)),
+    clipBias: 0.003
+  });
+  mirror.rotation.x = -Math.PI / 2;
+  mirror.position.y = 0.02;
+  cena.add(mirror);
+} catch (err) {
+  const topoPed = new THREE.Mesh(
+    new THREE.PlaneGeometry(pedW - 0.55, pedD - 0.55),
+    new THREE.MeshStandardMaterial({ color: 0xd0d4da, metalness: 0.55, roughness: 0.22 })
+  );
+  topoPed.rotation.x = -Math.PI / 2;
+  topoPed.position.y = 0.02;
+  cena.add(topoPed);
+}
+
+const barras = [];
+const grupoBarras = new THREE.Group();
+cena.add(grupoBarras);
+
+picos.forEach((p, i) => {
+  const qtd = p.qtdProcessos || 0;
+  const h = Math.max(0.35, (qtd / maxQtd) * maxH);
+  const cor = corHex(p.cor);
+  const geo = new RoundedBoxGeometry(barW, h, barW, 5, Math.min(0.22, barW * 0.22));
+  const mat = new THREE.MeshPhysicalMaterial({
+    color: cor,
+    metalness: 0.55,
+    roughness: 0.18,
+    clearcoat: 1,
+    clearcoatRoughness: 0.12,
+    reflectivity: 0.9,
+    sheen: 0.4,
+    sheenRoughness: 0.35,
+    sheenColor: corMaisClara(cor, 0.55),
+    emissive: corMaisClara(cor, 0.15),
+    emissiveIntensity: 0.08
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(startX + i * (barW + gap), h / 2 + 0.04, 0);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData = p;
+  grupoBarras.add(mesh);
+  barras.push(mesh);
+
+  // realce no topo (brilho)
+  const topo = new THREE.Mesh(
+    new RoundedBoxGeometry(barW * 0.92, Math.min(0.18, h * 0.08), barW * 0.92, 3, 0.06),
+    new THREE.MeshPhysicalMaterial({
+      color: corMaisClara(cor, 0.55),
+      metalness: 0.7,
+      roughness: 0.08,
+      clearcoat: 1,
+      transparent: true,
+      opacity: 0.9
+    })
+  );
+  topo.position.set(mesh.position.x, h + 0.04, 0);
+  topo.userData = p;
+  grupoBarras.add(topo);
+  barras.push(topo);
+
+  // etiqueta da sigla
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 160;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, 512, 160);
+  ctx.font = "800 72px Segoe UI, sans-serif";
+  ctx.fillStyle = "#132033";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.shadowColor = "rgba(255,255,255,0.85)";
+  ctx.shadowBlur = 6;
+  ctx.fillText(String(p.ofensoraSigla || p.processo || "").slice(0, 8), 256, 80);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const label = new THREE.Mesh(
+    new THREE.PlaneGeometry(Math.max(barW * 2.4, 1.8), Math.max(barW * 0.85, 0.65)),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false })
+  );
+  label.position.set(mesh.position.x, h + 0.85, 0);
+  label.userData = { ...p, isLabel: true };
+  grupoBarras.add(label);
+});
+
+const alvo = new THREE.Vector3(0, maxH * 0.35, 0);
+camera.lookAt(alvo);
+
+const luzKey = new THREE.DirectionalLight(0xffffff, 2.1);
+luzKey.position.set(-14, 22, 10);
+cena.add(luzKey);
+const luzFill = new THREE.DirectionalLight(0xd8e6ff, 0.75);
+luzFill.position.set(12, 10, -8);
+cena.add(luzFill);
+cena.add(new THREE.AmbientLight(0xffffff, 0.55));
+cena.add(new THREE.HemisphereLight(0xffffff, 0xa8b0bc, 0.55));
+
+function ajustar() {
+  const w = cenaEl.clientWidth || 1;
+  const h = cenaEl.clientHeight || 1;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener("resize", ajustar);
+if (window.ResizeObserver) {
+  new ResizeObserver(ajustar).observe(cenaEl);
+}
+ajustar();
+
+let arrastando = false;
+let px = 0;
+let py = 0;
+renderer.domElement.addEventListener("pointerdown", ev => {
+  arrastando = true;
+  px = ev.clientX;
+  py = ev.clientY;
+  renderer.domElement.setPointerCapture(ev.pointerId);
+});
+renderer.domElement.addEventListener("pointerup", () => { arrastando = false; });
+renderer.domElement.addEventListener("pointermove", ev => {
+  if (!arrastando) {
+    apontar(ev);
+    return;
+  }
+  const dx = ev.clientX - px;
+  const dy = ev.clientY - py;
+  px = ev.clientX;
+  py = ev.clientY;
+  const offset = camera.position.clone().sub(alvo);
+  const esferico = new THREE.Spherical().setFromVector3(offset);
+  esferico.theta -= dx * 0.005;
+  esferico.phi = Math.min(Math.PI * 0.48, Math.max(0.18, esferico.phi - dy * 0.005));
+  offset.setFromSpherical(esferico);
+  camera.position.copy(alvo).add(offset);
+  camera.lookAt(alvo);
+});
+renderer.domElement.addEventListener("wheel", ev => {
+  ev.preventDefault();
+  const offset = camera.position.clone().sub(alvo);
+  const fator = ev.deltaY > 0 ? 1.08 : 0.92;
+  offset.multiplyScalar(fator);
+  const dist = offset.length();
+  if (dist < 10 || dist > 70) return;
+  camera.position.copy(alvo).add(offset);
+}, { passive: false });
+renderer.domElement.addEventListener("contextmenu", ev => ev.preventDefault());
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+function apontar(ev) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(barras, false);
+  if (!hits.length) {
+    tip.style.display = "none";
+    return;
+  }
+  const p = hits[0].object.userData;
+  tip.innerHTML = `<div><strong>Unidade</strong> ${p.ofensoraSigla || p.processo}</div>
+    <div><strong>Ranking</strong> ${p.rank ? p.rank + "º" : "—"}</div>
+    <div><strong>Total</strong> ${p.qtdProcessos != null ? p.qtdProcessos + " processos" : "—"}</div>
+    <div><strong>Média</strong> ${p.mediaDias != null ? p.mediaDias + " d úteis" : (p.dias != null ? p.dias + " d úteis" : "—")}${p.diasTotal != null ? " · " + p.diasTotal + " d úteis acum." : ""}</div>
+    <div>${p.ofensora || p.projeto || ""}</div>`;
+  tip.style.display = "block";
+  tip.style.left = Math.min(ev.clientX - rect.left + 12, rect.width - 360) + "px";
+  tip.style.top = Math.min(ev.clientY - rect.top + 12, rect.height - 120) + "px";
+}
+
+function animar() {
+  requestAnimationFrame(animar);
+  // etiquetas olham para a câmera
+  grupoBarras.children.forEach(obj => {
+    if (obj.userData?.isLabel) obj.quaternion.copy(camera.quaternion);
+  });
+  renderer.render(cena, camera);
+}
+animar();
+</script>
+</body>
+</html>
