@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Central Gráfica · OS e SEI</title>
+<style>
+  :root {
+    --bg: #070b12;
+    --panel: #0c121c;
+    --sidebar: #0a1018;
+    --line: #1b3144;
+    --text: #d5e4ef;
+    --muted: #7f93a6;
+    --cyan: #7ee0ff;
+    --azul: #3aa0c8;
+    --ativo: #143448;
+    --laranja: #e0894f;
+    --verde: #3dba7a;
+    --kpi-bg: #0a1018;
+    --sidebar-grad-top: #0e1622;
+    --cab-grad-top: #0e1622;
+    --cab-grad-bottom: #0c121c;
+    --botao-bg: #102838;
+    --botao-border: #1e6f8a;
+    --drill-bg: #102838;
+    --drill-border: #2a4458;
+    --fluxo-lista-bg: #090e16;
+    --ofensora-item-line: #152434;
+    --barra-track: #152434;
+  }
+  body.visao-clara {
+    --bg: #eef3f8;
+    --panel: #ffffff;
+    --sidebar: #f4f7fb;
+    --line: #d5dee8;
+    --text: #1c2b3a;
+    --muted: #5d7082;
+    --cyan: #0f5f8a;
+    --azul: #0f5f8a;
+    --ativo: #d7ebf4;
+    --laranja: #9b4a12;
+    --verde: #1f7a4d;
+    --kpi-bg: #f7fafc;
+    --sidebar-grad-top: #ffffff;
+    --cab-grad-top: #ffffff;
+    --cab-grad-bottom: #f4f7fb;
+    --botao-bg: #e8f3f8;
+    --botao-border: #b7d4e4;
+    --drill-bg: #e8f3f8;
+    --drill-border: #b7d4e4;
+    --fluxo-lista-bg: #f7fafc;
+    --ofensora-item-line: #e8eef4;
+    --barra-track: #e8eef4;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: "Segoe UI", sans-serif; }
+  body { display: flex; overflow: hidden; height: 100%; }
+
+  #sidebar {
+    flex: 0 0 240px;
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, var(--sidebar-grad-top), var(--sidebar));
+    border-right: 1px solid var(--line);
+    min-height: 0;
+    transition: flex-basis 0.22s ease, width 0.22s ease;
+    position: relative;
+    z-index: 5;
+  }
+  body.sidebar-recolhido #sidebar {
+    flex-basis: 72px;
+    width: 72px;
+  }
+  body.sidebar-recolhido .brand p,
+  body.sidebar-recolhido .menu-item .desc,
+  body.sidebar-recolhido .sidebar-rodape,
+  body.sidebar-recolhido .brand-text { display: none; }
+  body.sidebar-recolhido .brand {
+    padding: 12px 8px;
+    justify-content: center;
+  }
+  body.sidebar-recolhido .brand h1 { font-size: 11px; text-align: center; }
+  body.sidebar-recolhido button.menu-item {
+    align-items: center;
+    padding: 12px 8px;
+    font-size: 11px;
+    text-align: center;
+  }
+  .brand {
+    padding: 14px 12px 12px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .brand-text { min-width: 0; }
+  button.toggle-panel {
+    appearance: none;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--drill-border);
+    background: var(--drill-bg);
+    color: var(--cyan);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+  }
+  button.toggle-panel:hover {
+    border-color: var(--cyan);
+    background: var(--ativo);
+  }
+  .brand h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .brand p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  nav.menu {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 10px;
+    flex: 1 1 auto;
+  }
+  button.menu-item {
+    appearance: none;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 11px 12px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  button.menu-item span.desc {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  button.menu-item:hover {
+    background: var(--ativo);
+    border-color: var(--botao-border);
+  }
+  button.menu-item.ativo {
+    background: var(--ativo);
+    border-color: var(--botao-border);
+    color: var(--text);
+  }
+  button.menu-item.ativo span.desc { color: var(--muted); }
+  body:not(.visao-clara) button.menu-item.ativo { color: #fff; }
+  body:not(.visao-clara) button.menu-item.ativo span.desc { color: #9ec9da; }
+  .sidebar-rodape {
+    padding: 12px 14px 16px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  #principal {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    overflow: hidden;
+  }
+  .tela {
+    display: none;
+    flex: 1 1 0;
+    min-height: 0;
+    height: 100%;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .tela.ativa { display: flex; }
+
+  .tela-cab {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: linear-gradient(180deg, var(--cab-grad-top), var(--cab-grad-bottom));
+    border-bottom: 1px solid var(--line);
+  }
+  .tela-cab h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .tela-cab p {
+    margin: 3px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  button.botao, a.botao {
+    appearance: none;
+    text-decoration: none;
+    background: var(--botao-bg);
+    color: var(--text);
+    border: 1px solid var(--botao-border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.botao:hover, a.botao:hover {
+    background: var(--ativo);
+    border-color: var(--cyan);
+    color: var(--text);
+  }
+  button.botao.ativo {
+    background: var(--ativo);
+    border-color: var(--cyan);
+    color: var(--text);
+    font-weight: 700;
+  }
+  body:not(.visao-clara) button.botao:hover,
+  body:not(.visao-clara) a.botao:hover,
+  body:not(.visao-clara) button.botao.ativo {
+    color: #fff;
+  }
+  button.botao.secundario, a.botao.secundario {
+    background: transparent;
+    border-color: var(--drill-border);
+    color: var(--muted);
+  }
+
+  .tela-corpo {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  .placeholder {
+    margin: auto;
+    max-width: 460px;
+    text-align: center;
+    padding: 32px 20px;
+    color: var(--muted);
+  }
+  .placeholder strong {
+    display: block;
+    color: var(--text);
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
+  #dash-scroll {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 16px 18px 24px;
+    display: block;
+  }
+  .bloco-dashes {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .bloco-dashes .cab-dashes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .bloco-dashes.recolhido .cab-dashes { border-bottom: 0; }
+  .bloco-dashes.recolhido .kpi-grid { display: none; }
+  .bloco-dashes .cab-dashes h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .bloco-dashes .cab-dashes span {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .cab-dashes-esq {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px 12px;
+    min-width: 0;
+  }
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    padding: 14px;
+  }
+  .kpi {
+    background: var(--kpi-bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px 16px;
+    min-width: 0;
+    min-height: 118px;
+    display: flex;
+    flex-direction: column;
+  }
+  .kpi.destaque {
+    border-color: #8a5528;
+    background: linear-gradient(160deg, #1a120c, #121820);
+  }
+  body.visao-clara .kpi.destaque {
+    background: linear-gradient(160deg, #fff8f0, #ffffff);
+  }
+  .kpi .rotulo {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+  }
+  .kpi .valor {
+    margin: 8px 0 0;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text);
+  }
+  body:not(.visao-clara) .kpi .valor { color: #fff; }
+  .kpi .legenda {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .kpi .detalhe {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .kpi .detalhe strong { color: var(--cyan); font-weight: 650; }
+  button.drill {
+    appearance: none;
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    border: 1px solid var(--drill-border);
+    background: var(--drill-bg);
+    color: var(--cyan);
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+  }
+  button.drill:hover {
+    border-color: var(--cyan);
+    background: var(--ativo);
+  }
+  .bloco-ofensoras {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .bloco-ofensoras.recolhido .ofensora-lista { display: none; }
+  .bloco-ofensoras.recolhido .cab { border-bottom: 0; }
+  .bloco-ofensoras .cab {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .bloco-ofensoras .cab-esq {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px 12px;
+    min-width: 0;
+  }
+  .bloco-ofensoras .cab h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .bloco-ofensoras .cab span {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .ofensora-lista {
+    display: flex;
+    flex-direction: column;
+  }
+  .ofensora-lista.compacto .ofensora-item.oculto-drill { display: none; }
+  .ofensora-item {
+    display: grid;
+    grid-template-columns: minmax(88px, 120px) 1fr auto;
+    gap: 10px 14px;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--ofensora-item-line);
+  }
+  .ofensora-item:last-child { border-bottom: 0; }
+  .ofensora-item .sigla {
+    font-weight: 700;
+    color: var(--cyan);
+    font-size: 13px;
+  }
+  .ofensora-item .barra-wrap {
+    min-width: 0;
+  }
+  .ofensora-item .barra {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--barra-track);
+    overflow: hidden;
+  }
+  .ofensora-item .barra > i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--azul), var(--cyan));
+  }
+  .ofensora-item .meta-linhas {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .ofensora-item .nums {
+    text-align: right;
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .ofensora-item .nums strong {
+    display: block;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .ofensora-item.topo {
+    background: rgba(224, 137, 79, 0.08);
+  }
+  .ofensora-item.topo .barra > i {
+    background: linear-gradient(90deg, #9b4a12, var(--laranja));
+  }
+
+  @media (max-width: 1200px) {
+    .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width: 900px) {
+    .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 720px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+    .ofensora-item {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+    .ofensora-item .nums { text-align: left; }
+  }
+
+  /* —— Fluxo 3D —— */
+  .fluxo-layout {
+    flex: 1 1 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(260px, 320px) 1fr;
+    overflow: hidden;
+    transition: grid-template-columns 0.22s ease;
+  }
+  .fluxo-layout.lista-recolhida {
+    grid-template-columns: 52px 1fr;
+  }
+  .fluxo-lista-wrap {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-right: 1px solid var(--line);
+    background: var(--fluxo-lista-bg);
+    overflow: hidden;
+  }
+  .fluxo-lista-cab {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .fluxo-lista-cab .cab-text {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+  }
+  .fluxo-lista-cab strong { color: var(--text); font-size: 13px; }
+  .fluxo-layout.lista-recolhida .fluxo-lista,
+  .fluxo-layout.lista-recolhida .fluxo-lista-cab .cab-text { display: none; }
+  .fluxo-layout.lista-recolhida .fluxo-lista-cab {
+    justify-content: center;
+    border-bottom: 0;
+    padding: 10px 6px;
+  }
+  .fluxo-lista {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .fluxo-item {
+    width: 100%;
+    text-align: left;
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid #132030;
+    border-left: 3px solid transparent;
+    color: var(--text);
+    padding: 10px 12px;
+    font: inherit;
+    cursor: pointer;
+  }
+  .fluxo-item:hover { background: var(--ativo); }
+  .fluxo-item.ativo {
+    background: var(--ativo);
+    border-left-color: var(--cyan);
+  }
+  .fluxo-item .fi-proc {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cyan);
+  }
+  .fluxo-item .fi-meta {
+    margin-top: 3px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+  .fluxo-item .fi-chip {
+    display: inline-block;
+    margin-top: 5px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #ffc089;
+    background: rgba(224, 137, 79, 0.15);
+    border: 1px solid #8a5528;
+    border-radius: 999px;
+    padding: 2px 7px;
+  }
+  .fluxo-cena {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(58, 160, 200, 0.12), transparent 55%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(224, 137, 79, 0.08), transparent 50%),
+      var(--bg);
+    overflow: hidden;
+  }
+  .fluxo-vazio {
+    margin: auto;
+    text-align: center;
+    color: var(--muted);
+    max-width: 420px;
+    padding: 24px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .fluxo-vazio strong {
+    display: block;
+    color: var(--text);
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+  .fluxo-detalhe {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .fluxo-detalhe[hidden] { display: none !important; }
+  .fluxo-meta {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    padding: 14px 16px 8px;
+  }
+  .fluxo-meta .fm-card {
+    background: linear-gradient(165deg, rgba(20, 40, 56, 0.95), rgba(12, 18, 28, 0.9));
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+    min-width: 0;
+  }
+  .fluxo-meta .fm-card span {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .fluxo-meta .fm-card strong {
+    display: block;
+    margin-top: 4px;
+    font-size: 13px;
+    color: #fff;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+  .fluxo-meta .fm-card.destaque {
+    border-color: #8a5528;
+    background: linear-gradient(165deg, #2a1810, #121820);
+  }
+  .fluxo-meta .fm-card.destaque strong { color: #ffc089; font-size: 18px; }
+  body.visao-clara .fluxo-meta .fm-card {
+    background: linear-gradient(165deg, #ffffff, #f7fafc);
+    box-shadow: 0 6px 18px rgba(28, 43, 58, 0.08);
+  }
+  body.visao-clara .fluxo-meta .fm-card strong { color: var(--text); }
+  body.visao-clara .fluxo-meta .fm-card.destaque {
+    background: linear-gradient(165deg, #fff8f0, #ffffff);
+  }
+  body.visao-clara .fluxo-meta .fm-card.destaque strong { color: var(--laranja); }
+  .fluxo-stage {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: auto;
+    perspective: 1400px;
+    perspective-origin: 50% 35%;
+    padding: 8px 8px 0;
+  }
+  .fluxo-track {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    min-width: max-content;
+    padding: 70px 48px 110px;
+    transform: rotateX(22deg) translateZ(0);
+    transform-style: preserve-3d;
+    transform-origin: center top;
+  }
+  .fluxo-track::before {
+    content: "";
+    position: absolute;
+    left: 48px;
+    right: 48px;
+    top: 107px;
+    height: 18px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #1e6f8a, #3aa0c8 35%, #7ee0ff 65%, #e0894f);
+    box-shadow:
+      0 14px 28px rgba(0, 0, 0, 0.5),
+      0 0 28px rgba(126, 224, 255, 0.22),
+      inset 0 2px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -3px 6px rgba(0, 30, 50, 0.35);
+    transform: translateZ(0);
+    z-index: 0;
+  }
+  .fluxo-step {
+    position: relative;
+    width: 158px;
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform-style: preserve-3d;
+    animation: fluxo-rise 0.55s ease both;
+  }
+  .fluxo-step .orb {
+    position: relative;
+    width: 86px;
+    height: 86px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 6px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: #041018;
+    line-height: 1.1;
+    background:
+      radial-gradient(circle at 30% 28%, #f4fcff 0%, #7ee0ff 28%, #3aa0c8 58%, #145a78 100%);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow:
+      0 22px 36px rgba(0, 0, 0, 0.5),
+      0 0 0 6px rgba(58, 160, 200, 0.12),
+      inset 0 -10px 18px rgba(0, 40, 60, 0.35),
+      inset 0 8px 12px rgba(255, 255, 255, 0.35);
+    transform: translateZ(48px);
+    z-index: 2;
+  }
+  .fluxo-step .orb::after {
+    content: "";
+    position: absolute;
+    inset: auto 12% -14px;
+    height: 18px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(0, 0, 0, 0.45), transparent 70%);
+    filter: blur(2px);
+    z-index: -1;
+  }
+  .fluxo-step .info {
+    margin-top: 28px;
+    width: 148px;
+    text-align: center;
+    transform: translateZ(24px);
+    background: rgba(12, 22, 34, 0.92);
+    border: 1px solid rgba(126, 224, 255, 0.35);
+    border-radius: 12px;
+    padding: 8px 8px 10px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+  }
+  .fluxo-step .info .data {
+    font-size: 11px;
+    font-weight: 700;
+    color: #7ee0ff;
+  }
+  .fluxo-step .info .sub {
+    margin-top: 3px;
+    font-size: 10px;
+    color: #c5d5e2;
+    line-height: 1.3;
+  }
+  .fluxo-step .info .dias {
+    margin-top: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 54px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #041018;
+    background: linear-gradient(180deg, #9be7ff, #3aa0c8);
+  }
+  body.visao-clara .fluxo-step .info {
+    background: #ffffff;
+    border: 1px solid #b7d4e4;
+    box-shadow: 0 8px 18px rgba(28, 43, 58, 0.12);
+  }
+  body.visao-clara .fluxo-step .info .data { color: #0f5f8a; }
+  body.visao-clara .fluxo-step .info .sub { color: #3d5266; }
+  body.visao-clara .fluxo-step.ofensora .info {
+    border-color: #f0b48a;
+    background: #fff8f0;
+  }
+  .fluxo-step .bridge {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    width: 158px;
+    height: 50px;
+    background: transparent;
+    border: 0;
+    transform: translateZ(55px);
+    z-index: 4;
+    pointer-events: none;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .fluxo-step .bridge .badge-dev {
+    position: static;
+    margin-top: 0;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #1a0a28;
+    background: linear-gradient(180deg, #e9d5ff, #c084fc);
+    border-radius: 999px;
+    padding: 3px 8px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
+    white-space: nowrap;
+  }
+  .fluxo-step.ofensora .orb {
+    color: #2a1000;
+    background:
+      radial-gradient(circle at 30% 28%, #ffe2c0 0%, #ffb067 30%, #e0894f 58%, #7a2e0a 100%);
+    box-shadow:
+      0 22px 40px rgba(120, 40, 0, 0.55),
+      0 0 0 7px rgba(224, 137, 79, 0.22),
+      0 0 34px rgba(224, 137, 79, 0.45),
+      inset 0 -10px 18px rgba(80, 20, 0, 0.4),
+      inset 0 8px 12px rgba(255, 230, 180, 0.35);
+    animation: ofensora-pulse 2.2s ease-in-out infinite;
+  }
+  .fluxo-step.ofensora .info {
+    border-color: rgba(224, 137, 79, 0.55);
+  }
+  .fluxo-step.ofensora .info .dias {
+    background: linear-gradient(180deg, #ffd3a8, #e0894f);
+    color: #2a1000;
+  }
+  .fluxo-step.ofensora .badge-of {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%) translateZ(60px);
+    z-index: 3;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #2a1000;
+    background: linear-gradient(180deg, #ffd29a, #e0894f);
+    border-radius: 999px;
+    padding: 3px 8px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
+    white-space: nowrap;
+  }
+  .fluxo-step.devolucao .orb {
+    box-shadow:
+      0 22px 36px rgba(0, 0, 0, 0.5),
+      0 0 0 6px rgba(192, 132, 252, 0.28),
+      0 0 28px rgba(192, 132, 252, 0.35),
+      inset 0 -10px 18px rgba(0, 40, 60, 0.35),
+      inset 0 8px 12px rgba(255, 255, 255, 0.35);
+  }
+  .fluxo-legenda {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 8px 16px 12px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .fluxo-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+  .fluxo-legenda i {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .fluxo-legenda .lg-normal { background: #3aa0c8; box-shadow: 0 0 8px #3aa0c8; }
+  .fluxo-legenda .lg-ofensora { background: #e0894f; box-shadow: 0 0 8px #e0894f; }
+  .fluxo-legenda .lg-dev { background: #c084fc; box-shadow: 0 0 8px #c084fc; }
+
+  @keyframes ofensora-pulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.12); }
+  }
+  @keyframes fluxo-rise {
+    from { opacity: 0; transform: translateY(18px) translateZ(-20px); }
+    to { opacity: 1; transform: translateY(0) translateZ(0); }
+  }
+
+  @media (max-width: 980px) {
+    .fluxo-layout { grid-template-columns: 1fr; grid-template-rows: 180px 1fr; }
+    .fluxo-lista-wrap { border-right: 0; border-bottom: 1px solid var(--line); }
+    .fluxo-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .fluxo-track { transform: rotateX(12deg); padding-top: 56px; }
+  }
+
+  .grafico-painel {
+    display: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    flex-direction: column;
+    background: var(--bg);
+  }
+  .grafico-painel.ativo { display: flex; }
+  .painel-cab {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  .painel-cab strong { font-size: 13px; }
+  .painel-cab span { color: var(--muted); font-size: 12px; }
+  iframe {
+    flex: 1 1 auto;
+    height: 0;
+    width: 100%;
+    border: 0;
+    background: var(--bg);
+    min-height: 0;
+  }
+
+  @media (max-width: 820px) {
+    #sidebar { flex-basis: 200px; width: 200px; }
+  }
+  @media (max-width: 640px) {
+    body { flex-direction: column; }
+    #sidebar {
+      flex: 0 0 auto;
+      width: 100%;
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+    }
+    nav.menu { flex-direction: row; overflow-x: auto; padding: 8px; }
+    button.menu-item { min-width: 140px; }
+    .sidebar-rodape { display: none; }
+  }
+</style>
+</head>
+<body>
+<aside id="sidebar">
+  <div class="brand">
+    <div class="brand-text">
+      <h1>Central Gráfica</h1>
+      <p>Painel principal · OS e SEI</p>
+    </div>
+    <button type="button" class="toggle-panel" id="toggle-sidebar" title="Recolher menu" aria-label="Recolher menu lateral">☰</button>
+  </div>
+  <nav class="menu" aria-label="Menu principal">
+    <button type="button" class="menu-item ativo" data-tela="dashboard">
+      Dashboard
+      <span class="desc">Visão geral</span>
+    </button>
+    <button type="button" class="menu-item" data-tela="fluxo">
+      Fluxo do Processo
+      <span class="desc">Caminho e etapas</span>
+    </button>
+    <button type="button" class="menu-item" data-tela="graficos">
+      Gráficos
+      <span class="desc">Nuvem OS e Ofensora</span>
+    </button>
+  </nav>
+  <div class="sidebar-rodape">Use o menu para navegar entre as telas.</div>
+</aside>
+
+<main id="principal">
+  <section class="tela ativa" id="tela-dashboard" data-tela="dashboard">
+    <div class="tela-cab">
+      <div>
+        <h2>Dashboard</h2>
+        <p id="dash-origem">Indicadores consolidados de processos SEI, OS e unidades ofensoras.</p>
+      </div>
+      <div class="acoes">
+        <button type="button" class="botao secundario" id="btn-visao-clara" title="Alternar visão clara">Visão clara</button>
+        <a class="botao secundario" href="resumo-sei.html" target="_blank" rel="noopener">Abrir Resumo SEI</a>
+      </div>
+    </div>
+    <div class="tela-corpo">
+      <div id="dash-scroll">
+        <div class="bloco-dashes" id="bloco-dashes">
+          <div class="cab-dashes">
+            <div class="cab-dashes-esq">
+              <h3>Painel dashes</h3>
+              <span id="dashes-resumo">Indicadores principais</span>
+            </div>
+            <button type="button" class="drill" id="drill-dashes" title="Recolher painel" aria-label="Recolher painel dashes">▲</button>
+          </div>
+          <div class="kpi-grid" id="kpi-grid"></div>
+        </div>
+        <div class="bloco-ofensoras" id="bloco-ofensoras">
+          <div class="cab">
+            <div class="cab-esq">
+              <h3>Responsabilidade por Unidade Ofensora</h3>
+              <span id="ofensoras-resumo">Passaram pela unidade × em quantos foi ofensora</span>
+            </div>
+            <div class="acoes" style="gap:6px">
+              <button type="button" class="drill" id="drill-ofensoras-lista" title="Expandir todas as unidades" aria-label="Expandir lista de ofensoras">⬇</button>
+              <button type="button" class="drill" id="drill-ofensoras-bloco" title="Recolher seção" aria-label="Recolher seção de ofensoras">▲</button>
+            </div>
+          </div>
+          <div class="ofensora-lista compacto" id="ofensora-lista"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tela" id="tela-fluxo" data-tela="fluxo">
+    <div class="tela-cab">
+      <div>
+        <h2>Fluxo do Processo</h2>
+        <p id="fluxo-origem">Infográfico 3D dos andamentos por unidade · clique em um processo</p>
+      </div>
+      <div class="acoes">
+        <input id="fluxo-busca" type="search" placeholder="Buscar processo, projeto, OS, ofensora…" autocomplete="off" style="background:#0c121c;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font:inherit;font-size:13px;min-width:min(320px,60vw)">
+      </div>
+    </div>
+    <div class="tela-corpo">
+      <div class="fluxo-layout" id="fluxo-layout">
+        <aside class="fluxo-lista-wrap">
+          <div class="fluxo-lista-cab">
+            <div class="cab-text">
+              <strong>Processos</strong>
+              <span id="fluxo-lista-qtd">—</span>
+            </div>
+            <button type="button" class="toggle-panel" id="toggle-fluxo-lista" title="Recolher lista" aria-label="Recolher lista de processos">⟨</button>
+          </div>
+          <div class="fluxo-lista" id="fluxo-lista"></div>
+        </aside>
+        <div class="fluxo-cena" id="fluxo-cena">
+          <div class="fluxo-vazio" id="fluxo-vazio">
+            <strong>Selecione um processo</strong>
+            Escolha um registro à esquerda para ver o fluxo 3D das unidades, datas, dias, devoluções e a ofensora.
+          </div>
+          <div class="fluxo-detalhe" id="fluxo-detalhe" hidden>
+            <div class="fluxo-meta" id="fluxo-meta"></div>
+            <div class="fluxo-stage">
+              <div class="fluxo-track" id="fluxo-track"></div>
+            </div>
+            <div class="fluxo-legenda">
+              <span><i class="lg-normal"></i> Encaminhamento</span>
+              <span><i class="lg-ofensora"></i> Unidade ofensora</span>
+              <span><i class="lg-dev"></i> Devolução / retorno</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tela" id="tela-graficos" data-tela="graficos">
+    <div class="tela-cab">
+      <div>
+        <h2>Gráficos</h2>
+        <p>Uma visualização por vez — escolha Nuvem OS ou Unidade Ofensora.</p>
+      </div>
+      <div class="acoes" role="tablist" aria-label="Escolher gráfico">
+        <button type="button" class="botao ativo" data-grafico="nuvem" id="btn-nuvem">Nuvem OS</button>
+        <button type="button" class="botao" data-grafico="picos" id="btn-picos">Unidade Ofensora</button>
+        <a class="botao secundario" href="resumo-sei.html" target="_blank" rel="noopener">Resumo SEI</a>
+      </div>
+    </div>
+    <div class="tela-corpo">
+      <div class="grafico-painel ativo" id="grafico-nuvem" data-grafico="nuvem">
+        <div class="painel-cab">
+          <strong>Nuvem de OS</strong>
+          <span>dados de data (1) 1.xlsx</span>
+        </div>
+        <iframe id="iframe-nuvem" title="Nuvem de ordens de serviço" src="nuvem.html?embed=1&amp;v=nuvem-todos-filtros" loading="lazy"></iframe>
+      </div>
+      <div class="grafico-painel" id="grafico-picos" data-grafico="picos">
+        <div class="painel-cab">
+          <strong>Barras 3D · Unidade Ofensora</strong>
+          <span>altura = qtde. de processos da ofensora</span>
+        </div>
+        <iframe id="iframe-picos" title="Unidade Ofensora" src="picos-sei.html?embed=1&amp;v=barras3d-20261125" loading="lazy"></iframe>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="dashboard-dados.js?v=periodo-2026"></script>
+<script src="fluxo-dados.js?v=periodo-2026"></script>
+<script>
+(function () {
+  const menuItens = document.querySelectorAll("button.menu-item[data-tela]");
+  const telas = document.querySelectorAll(".tela[data-tela]");
+  const botoesGrafico = document.querySelectorAll("button.botao[data-grafico]");
+  const paineisGrafico = document.querySelectorAll(".grafico-painel[data-grafico]");
+  const btnVisaoClara = document.getElementById("btn-visao-clara");
+  const CHAVE_VISAO = "mapaSEI.visaoClara";
+
+  function aplicarVisaoClara(ativa) {
+    document.body.classList.toggle("visao-clara", !!ativa);
+    if (btnVisaoClara) {
+      btnVisaoClara.classList.toggle("ativo", !!ativa);
+      btnVisaoClara.textContent = ativa ? "Visão escura" : "Visão clara";
+      btnVisaoClara.title = ativa ? "Voltar para visão escura" : "Alternar visão clara";
+    }
+    try { localStorage.setItem(CHAVE_VISAO, ativa ? "1" : "0"); } catch (e) {}
+  }
+
+  try {
+    aplicarVisaoClara(localStorage.getItem(CHAVE_VISAO) === "1");
+  } catch (e) {
+    aplicarVisaoClara(false);
+  }
+
+  if (btnVisaoClara) {
+    btnVisaoClara.addEventListener("click", () => {
+      aplicarVisaoClara(!document.body.classList.contains("visao-clara"));
+    });
+  }
+
+  function abrirTela(id) {
+    menuItens.forEach(btn => btn.classList.toggle("ativo", btn.dataset.tela === id));
+    telas.forEach(tela => tela.classList.toggle("ativa", tela.dataset.tela === id));
+  }
+
+  function abrirGrafico(id) {
+    botoesGrafico.forEach(btn => btn.classList.toggle("ativo", btn.dataset.grafico === id));
+    paineisGrafico.forEach(painel => painel.classList.toggle("ativo", painel.dataset.grafico === id));
+    if (id === "picos") {
+      const iframe = document.getElementById("iframe-picos");
+      if (iframe) iframe.src = "picos-sei.html?embed=1&v=barras3d-20261125&t=" + Date.now();
+    }
+    if (id === "nuvem") {
+      const iframe = document.getElementById("iframe-nuvem");
+      if (iframe) iframe.src = "nuvem.html?embed=1&v=nuvem-todos-filtros&t=" + Date.now();
+    }
+  }
+
+  menuItens.forEach(btn => {
+    btn.addEventListener("click", () => abrirTela(btn.dataset.tela));
+  });
+
+  botoesGrafico.forEach(btn => {
+    btn.addEventListener("click", () => abrirGrafico(btn.dataset.grafico));
+  });
+
+  function fmt(n, casas) {
+    const opts = casas != null
+      ? { minimumFractionDigits: casas, maximumFractionDigits: casas }
+      : {};
+    return Number(n || 0).toLocaleString("pt-BR", opts);
+  }
+
+  function esc(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  /* —— Fluxo do Processo —— */
+  const fluxoDados = window.FLUXO_DADOS || { processos: [] };
+  const fluxoListaEl = document.getElementById("fluxo-lista");
+  const fluxoBuscaEl = document.getElementById("fluxo-busca");
+  const fluxoListaQtd = document.getElementById("fluxo-lista-qtd");
+  const fluxoVazio = document.getElementById("fluxo-vazio");
+  const fluxoDetalhe = document.getElementById("fluxo-detalhe");
+  const fluxoMeta = document.getElementById("fluxo-meta");
+  const fluxoTrack = document.getElementById("fluxo-track");
+  let fluxoSelecionado = "";
+  let fluxoFiltrados = [];
+
+  (fluxoDados.processos || []).forEach(p => {
+    p._busca = [
+      p.processo, p.projeto, p.contrato, p.os, p.status,
+      p.ofensoraSigla, p.ofensora,
+      ...(p.estadias || []).map(e => e.sigla)
+    ].join(" ").toLowerCase();
+  });
+
+  document.getElementById("fluxo-origem").textContent =
+    (fluxoDados.origem || "Resumo das OS.xlsx") +
+    " · " + fmt(fluxoDados.qtdProcessos || 0) + " processos · dias úteis (corridos informativo) · gerado em " +
+    (fluxoDados.geradoEm || "—");
+
+  function rotuloDias(n, modo) {
+    if (modo === "uteis") return n === 1 ? "1 dia útil" : fmt(n) + " dias úteis";
+    if (modo === "corridos") return n === 1 ? "1 dia corrido" : fmt(n) + " dias corridos";
+    return n === 1 ? "1 dia útil" : fmt(n) + " dias úteis";
+  }
+
+  function rotuloDiasPar(uteis, corridos) {
+    const u = uteis || 0;
+    const c = corridos;
+    if (c == null) return rotuloDias(u, "uteis");
+    return rotuloDias(u, "uteis") + " (" + rotuloDias(c, "corridos") + ")";
+  }
+
+  function textoPassagem(e, prev) {
+    if (!prev) return "Abertura · recebido";
+    if (e.devolucao) return "Devolução · " + (e.origem || prev.sigla) + " → " + e.sigla;
+    return "Recebido de " + (e.origem || prev.sigla);
+  }
+
+  function pintarListaFluxo() {
+    const termo = (fluxoBuscaEl.value || "").trim().toLowerCase();
+    fluxoFiltrados = (fluxoDados.processos || []).filter(p => !termo || p._busca.includes(termo));
+    fluxoListaQtd.textContent = fmt(fluxoFiltrados.length);
+    const frag = document.createDocumentFragment();
+    fluxoFiltrados.slice(0, 400).forEach(p => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "fluxo-item" + (p.processo === fluxoSelecionado ? " ativo" : "");
+      btn.innerHTML =
+        '<div class="fi-proc">' + esc(p.processo) + "</div>" +
+        '<div class="fi-meta">' + esc(p.projeto || "Sem projeto") +
+        (p.os ? " · OS " + esc(p.os) : "") + "</div>" +
+        (p.ofensoraSigla
+          ? '<span class="fi-chip">' + esc(p.ofensoraSigla) + " · " + rotuloDiasPar(p.ofensoraDias, p.ofensoraDiasCorridos) + "</span>"
+          : "");
+      btn.addEventListener("click", () => selecionarFluxo(p.processo));
+      frag.appendChild(btn);
+    });
+    fluxoListaEl.replaceChildren(frag);
+    if (fluxoFiltrados.length > 400) {
+      const mais = document.createElement("div");
+      mais.className = "fluxo-vazio";
+      mais.style.padding = "12px";
+      mais.textContent = "Mostrando 400 de " + fmt(fluxoFiltrados.length) + " — refine a busca.";
+      fluxoListaEl.appendChild(mais);
+    }
+  }
+
+  function selecionarFluxo(processoId) {
+    fluxoSelecionado = processoId;
+    const p = (fluxoDados.processos || []).find(x => x.processo === processoId);
+    pintarListaFluxo();
+    if (!p) return;
+
+    fluxoVazio.hidden = true;
+    fluxoDetalhe.hidden = false;
+
+    fluxoMeta.innerHTML =
+      '<div class="fm-card"><span>Processo SEI</span><strong>' + esc(p.processo) + "</strong></div>" +
+      '<div class="fm-card"><span>Projeto</span><strong>' + esc(p.projeto || "—") + "</strong></div>" +
+      '<div class="fm-card"><span>Contrato · OS</span><strong>' +
+        esc(p.contrato || "—") + (p.os ? " · OS " + esc(p.os) : "") +
+      "</strong></div>" +
+      '<div class="fm-card destaque"><span>Total início → fim (úteis)</span><strong>' +
+        rotuloDiasPar(p.diasTotal || 0, p.diasTotalCorridos) +
+      "</strong></div>";
+
+    const estadias = p.estadias || [];
+    fluxoTrack.replaceChildren();
+    if (!estadias.length) {
+      fluxoTrack.innerHTML = '<div class="fluxo-vazio">Sem estadias para este processo.</div>';
+      return;
+    }
+
+    estadias.forEach((e, i) => {
+      const prev = i > 0 ? estadias[i - 1] : null;
+      const next = estadias[i + 1];
+      const step = document.createElement("article");
+      const classes = ["fluxo-step"];
+      if (e.ofensora) classes.push("ofensora");
+      if (e.devolucao) classes.push("devolucao");
+      if (next && next.devolucao) classes.push("para-devolucao");
+      step.className = classes.join(" ");
+      step.style.animationDelay = (i * 0.05) + "s";
+
+      const faixaData = e.inicio === e.fim || !e.fim
+        ? (e.inicio || "—")
+        : (e.inicio + " → " + e.fim);
+
+      const bridgeHtml = i < estadias.length - 1
+        ? ('<div class="bridge">' +
+            (next && next.devolucao ? '<span class="badge-dev">DEVOLUÇÃO</span>' : "") +
+          "</div>")
+        : "";
+
+      step.innerHTML =
+        (e.ofensora ? '<div class="badge-of">OFENSORA</div>' : "") +
+        '<div class="orb">' + esc(e.sigla) + "</div>" +
+        '<div class="info">' +
+          '<div class="data">' + esc(faixaData) + "</div>" +
+          '<div class="sub">' + esc(textoPassagem(e, prev)) + "</div>" +
+          '<div class="dias">' + rotuloDiasPar(e.diasUteis != null ? e.diasUteis : e.dias, e.diasCorridos) + "</div>" +
+        "</div>" +
+        bridgeHtml;
+
+      fluxoTrack.appendChild(step);
+    });
+
+    const stage = fluxoTrack.parentElement;
+    if (stage) stage.scrollLeft = 0;
+  }
+
+  fluxoBuscaEl.addEventListener("input", () => {
+    clearTimeout(fluxoBuscaEl._t);
+    fluxoBuscaEl._t = setTimeout(pintarListaFluxo, 160);
+  });
+
+  const toggleSidebar = document.getElementById("toggle-sidebar");
+  const toggleFluxoLista = document.getElementById("toggle-fluxo-lista");
+  const fluxoLayout = document.getElementById("fluxo-layout");
+
+  toggleSidebar.addEventListener("click", () => {
+    const recolhido = document.body.classList.toggle("sidebar-recolhido");
+    toggleSidebar.textContent = recolhido ? "☰" : "☰";
+    toggleSidebar.title = recolhido ? "Expandir menu" : "Recolher menu";
+    toggleSidebar.setAttribute("aria-label", toggleSidebar.title);
+  });
+
+  toggleFluxoLista.addEventListener("click", () => {
+    const recolhida = fluxoLayout.classList.toggle("lista-recolhida");
+    toggleFluxoLista.textContent = recolhida ? "⟩" : "⟨";
+    toggleFluxoLista.title = recolhida ? "Expandir lista" : "Recolher lista";
+    toggleFluxoLista.setAttribute("aria-label", toggleFluxoLista.title);
+  });
+
+  pintarListaFluxo();
+
+
+  function kpiCard(rotulo, valorHtml, extraHtml, destaque) {
+    return `<article class="kpi${destaque ? " destaque" : ""}">
+      <p class="rotulo">${rotulo}</p>
+      <p class="valor">${valorHtml}</p>
+      ${extraHtml}
+    </article>`;
+  }
+
+  function renderDashboard(d) {
+    if (!d) {
+      document.getElementById("kpi-grid").innerHTML =
+        '<div class="kpi"><p class="rotulo">Dados</p><p class="legenda">Execute python preparar_dashboard.py para gerar dashboard-dados.js</p></div>';
+      return;
+    }
+
+    document.getElementById("dash-origem").textContent =
+      d.origem + " · gerado em " + d.geradoEm;
+
+    const maior = d.maiorOfensora;
+    const kpi = document.getElementById("kpi-grid");
+    kpi.innerHTML = [
+      kpiCard("Processos SEI", fmt(d.qtdProcessos), `<p class="legenda">${esc(d.periodoLegenda || "—")}</p>`),
+      kpiCard("Contratos", fmt(d.qtdContratos), '<p class="legenda">Contratos distintos vinculados às OS</p>'),
+      kpiCard("Ordens de Serviço", fmt(d.qtdOS), '<p class="legenda">Total de OS na base</p>'),
+      kpiCard("Projetos", fmt(d.qtdProjetos), '<p class="legenda">Projetos distintos</p>'),
+      kpiCard(
+        "Média dias úteis (início → fim)",
+        fmt(d.mediaDiasInicioFim, 1),
+        `<p class="legenda">Principal · corridos: ${fmt(d.mediaDiasInicioFimCorridos, 1)} d</p>`
+      ),
+      kpiCard(
+        "Média sem dias ofensores",
+        fmt(d.mediaDiasSemOfensora, 1),
+        '<p class="legenda">Dias úteis totais − dias úteis na ofensora</p>'
+      ),
+      kpiCard(
+        "Mediana dos dias úteis",
+        fmt(d.medianaDiasInicioFim, 1),
+        `<p class="legenda">Sem ofensora: ${fmt(d.medianaDiasSemOfensora, 1)} d úteis · corridos: ${fmt(d.medianaDiasInicioFimCorridos, 1)} d</p>`
+      ),
+      kpiCard(
+        "Maior permanência na ofensora",
+        maior ? fmt(maior.dias) + " d úteis" : "—",
+        `<div class="detalhe">${maior
+          ? `<div><strong>${esc(maior.ofensoraSigla)}</strong> · ${esc(maior.processo)}</div>
+             <div>${esc(maior.projeto || "Sem projeto informado")}</div>
+             <div style="color:var(--muted);margin-top:4px">${maior.diasCorridos != null ? fmt(maior.diasCorridos) + " dias corridos (informativo)" : ""}</div>`
+          : "Sem registro de ofensora"}</div>`,
+        true
+      )
+    ].join("");
+
+    document.getElementById("dashes-resumo").textContent =
+      fmt(d.qtdProcessos) + " processos · " + fmt(d.qtdOS) + " OS · média " + fmt(d.mediaDiasInicioFim, 1) + " d úteis";
+
+    document.getElementById("ofensoras-resumo").textContent =
+      fmt(d.qtdProcessos) + " processos · " + fmt((d.ofensoras || []).length) + " unidades · % = ofensora ÷ passaram pela unidade";
+
+    const lista = document.getElementById("ofensora-lista");
+    const TOP = 8;
+    const temNovoCalculo = (d.ofensoras || []).some(o => o.qtdPassaram != null && o.qtdOfensora != null);
+    const maxBarra = Math.max(
+      1,
+      ...((d.ofensoras || []).map(o => Number(temNovoCalculo ? (o.pctFoiOfensora || 0) : (o.pctProcessos || 0))))
+    );
+    lista.innerHTML = (d.ofensoras || []).map((o, i) => {
+      const passaram = Number(o.qtdPassaram != null ? o.qtdPassaram : 0);
+      const ofensora = Number(o.qtdOfensora != null ? o.qtdOfensora : (o.qtdProcessos || 0));
+      const pct = passaram > 0
+        ? Math.round((ofensora / passaram) * 10000) / 100
+        : Number(o.pctFoiOfensora != null ? o.pctFoiOfensora : (o.pctProcessos || 0));
+      const largura = Math.max(4, Math.round((pct / maxBarra) * 100));
+      return `<div class="ofensora-item${i === 0 ? " topo" : ""}${i >= TOP ? " oculto-drill" : ""}">
+        <div class="sigla">${esc(o.sigla)}</div>
+        <div class="barra-wrap">
+          <div class="barra" title="Dos ${fmt(passaram)} que passaram, foi ofensora em ${fmt(ofensora)} (${fmt(pct, 2)}%)"><i style="width:${largura}%"></i></div>
+          <div class="meta-linhas">Passaram pela unidade: ${fmt(passaram)} · Destes, foi ofensora em: ${fmt(ofensora)} · ${fmt(pct, 2)}%</div>
+        </div>
+        <div class="nums">
+          <strong>${fmt(pct, 1)}% ofensora</strong>
+          média ${fmt(o.mediaDias, 1)} d úteis
+        </div>
+      </div>`;
+    }).join("") || '<p class="placeholder" style="padding:20px">Sem unidades ofensoras.</p>';
+  }
+
+  const blocoDashes = document.getElementById("bloco-dashes");
+  const drillDashes = document.getElementById("drill-dashes");
+  const blocoOfensoras = document.getElementById("bloco-ofensoras");
+  const drillOfensorasBloco = document.getElementById("drill-ofensoras-bloco");
+  const drillOfensorasLista = document.getElementById("drill-ofensoras-lista");
+  const ofensoraListaEl = document.getElementById("ofensora-lista");
+
+  drillDashes.addEventListener("click", () => {
+    const recolhido = blocoDashes.classList.toggle("recolhido");
+    drillDashes.textContent = recolhido ? "▼" : "▲";
+    drillDashes.title = recolhido ? "Expandir painel" : "Recolher painel";
+    drillDashes.setAttribute("aria-label", drillDashes.title);
+  });
+
+  drillOfensorasBloco.addEventListener("click", () => {
+    const recolhido = blocoOfensoras.classList.toggle("recolhido");
+    drillOfensorasBloco.textContent = recolhido ? "▼" : "▲";
+    drillOfensorasBloco.title = recolhido ? "Expandir seção" : "Recolher seção";
+    drillOfensorasBloco.setAttribute("aria-label", drillOfensorasBloco.title);
+  });
+
+  drillOfensorasLista.addEventListener("click", () => {
+    const compacto = ofensoraListaEl.classList.toggle("compacto");
+    const expandido = !compacto;
+    drillOfensorasLista.textContent = expandido ? "⬆" : "⬇";
+    drillOfensorasLista.title = expandido ? "Mostrar apenas o topo" : "Expandir todas as unidades";
+    drillOfensorasLista.setAttribute("aria-label", drillOfensorasLista.title);
+    if (blocoOfensoras.classList.contains("recolhido")) {
+      blocoOfensoras.classList.remove("recolhido");
+      drillOfensorasBloco.textContent = "▲";
+      drillOfensorasBloco.title = "Recolher seção";
+    }
+  });
+
+  renderDashboard(window.DASHBOARD_DADOS);
+})();
+</script>
+</body>
+</html>
